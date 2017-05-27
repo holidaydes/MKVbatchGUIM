@@ -13,12 +13,22 @@ import de.holiday.mkvbatchguim.common.language.MessageValue;
 import de.holiday.mkvbatchguim.common.language.TitleValue;
 import de.holiday.mkvbatchguim.config.Configuration;
 import de.holiday.mkvbatchguim.config.logic.Config;
+import de.holiday.mkvbatchguim.logic.Resource;
+import de.holiday.mkvbatchguim.ps.PsCommand;
+import de.holiday.mkvbatchguim.ps.logic.PsCommandResponse;
+import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import javax.swing.BorderFactory;
+import javax.swing.DefaultCellEditor;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumn;
+import org.apache.commons.io.FilenameUtils;
 
 /**
  *
@@ -27,6 +37,9 @@ import javax.swing.event.DocumentListener;
 public class GuiJFrame extends javax.swing.JFrame {
 
     private Language lang;
+    private List<Resource> resources;
+    private List<String> forcedSubList;
+    private String currentPath;
 
     /**
      * Creates new form GuiJFrame
@@ -38,38 +51,46 @@ public class GuiJFrame extends javax.swing.JFrame {
             @Override
             public void insertUpdate(DocumentEvent e) {
                 enableComponents();
+                updateOutputList();
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
                 enableComponents();
+                updateOutputList();
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
                 enableComponents();
+                updateOutputList();
             }
         });
         this.releaseTextField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
                 enableComponents();
+                updateOutputList();
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
                 enableComponents();
+                updateOutputList();
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
                 enableComponents();
+                updateOutputList();
             }
         });
         readConfig();
+        initTable();
         setLanguageComboBoxes();
         setComboBoxes();
         setLabels();
+        this.versionLabel.setText(Constans.VERSION);
     }
 
     /**
@@ -117,13 +138,13 @@ public class GuiJFrame extends javax.swing.JFrame {
         releaseTextField = new javax.swing.JTextField();
         seriesTitleLabel = new javax.swing.JLabel();
         seriesTitleTextField = new javax.swing.JTextField();
-        outputListPanel = new javax.swing.JPanel();
-        outputListScrollPane = new javax.swing.JScrollPane();
-        outputListList = new javax.swing.JList<>();
         startButton = new javax.swing.JButton();
+        outputScrollPane = new javax.swing.JScrollPane();
+        outputTable = new javax.swing.JTable();
+        versionLabel = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setPreferredSize(new java.awt.Dimension(1200, 800));
+        setPreferredSize(new java.awt.Dimension(1280, 800));
         setResizable(false);
 
         configPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("configLabel"));
@@ -264,7 +285,7 @@ public class GuiJFrame extends javax.swing.JFrame {
                         .addComponent(engSubtitleButton))
                     .addGroup(inputConfigPanelLayout.createSequentialGroup()
                         .addComponent(forcedSubtitleLabel)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 265, Short.MAX_VALUE)
                         .addComponent(forcedSubtitleButton))
                     .addGroup(inputConfigPanelLayout.createSequentialGroup()
                         .addComponent(inputAudioLabel)
@@ -346,6 +367,11 @@ public class GuiJFrame extends javax.swing.JFrame {
         codecTypeLabel.setEnabled(false);
 
         codecTypeComboBox.setEnabled(false);
+        codecTypeComboBox.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                codecTypeComboBoxActionPerformed(evt);
+            }
+        });
 
         releaseLabel.setText("releaseLabel");
         releaseLabel.setEnabled(false);
@@ -389,7 +415,7 @@ public class GuiJFrame extends javax.swing.JFrame {
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(codecTypeComboBox, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                             .addComponent(seriesTitleLabel))
-                        .addGap(0, 67, Short.MAX_VALUE))
+                        .addGap(0, 140, Short.MAX_VALUE))
                     .addGroup(outputConfigPanelLayout.createSequentialGroup()
                         .addComponent(outputVideoLabel)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
@@ -422,28 +448,30 @@ public class GuiJFrame extends javax.swing.JFrame {
                     .addComponent(outputVideoButton))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(outputVideoTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(40, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         seasonLabel.getAccessibleContext().setAccessibleDescription("");
 
-        outputListPanel.setBorder(javax.swing.BorderFactory.createTitledBorder("outputListLabel"));
-
-        outputListScrollPane.setViewportView(outputListList);
-
-        javax.swing.GroupLayout outputListPanelLayout = new javax.swing.GroupLayout(outputListPanel);
-        outputListPanel.setLayout(outputListPanelLayout);
-        outputListPanelLayout.setHorizontalGroup(
-            outputListPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(outputListScrollPane)
-        );
-        outputListPanelLayout.setVerticalGroup(
-            outputListPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(outputListScrollPane)
-        );
-
         startButton.setText("startButton");
         startButton.setEnabled(false);
+        startButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                startButtonActionPerformed(evt);
+            }
+        });
+
+        outputTable.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+
+            },
+            new String [] {
+
+            }
+        ));
+        outputScrollPane.setViewportView(outputTable);
+
+        versionLabel.setText("versionLabel");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -451,16 +479,19 @@ public class GuiJFrame extends javax.swing.JFrame {
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                    .addComponent(inputConfigPanel, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(configPanel, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(outputConfigPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(outputListPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(configPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(outputConfigPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(inputConfigPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(outputScrollPane)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
-                        .addGap(497, 497, 497)
-                        .addComponent(startButton)))
+                        .addGap(0, 0, Short.MAX_VALUE)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(startButton, javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(versionLabel, javax.swing.GroupLayout.Alignment.TRAILING))))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -468,16 +499,18 @@ public class GuiJFrame extends javax.swing.JFrame {
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(inputConfigPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(configPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(inputConfigPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(outputConfigPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addComponent(outputListPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addComponent(outputConfigPanel, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(outputScrollPane, javax.swing.GroupLayout.PREFERRED_SIZE, 300, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(startButton)
-                .addContainerGap())
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(versionLabel)
+                .addGap(45, 45, 45))
         );
 
         pack();
@@ -489,15 +522,17 @@ public class GuiJFrame extends javax.swing.JFrame {
             setLabels();
             this.languageComboBox.removeAllItems();
             setLanguageComboBoxes();
+            initTable();
+            updateOutputList();
         }
     }//GEN-LAST:event_languageComboBoxActionPerformed
 
     private void resolutionComboBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_resolutionComboBoxActionPerformed
-        // TODO add your handling code here:
+        updateOutputList();
     }//GEN-LAST:event_resolutionComboBoxActionPerformed
 
     private void videoTypeComboBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_videoTypeComboBoxActionPerformed
-        // TODO add your handling code here:
+        updateOutputList();
     }//GEN-LAST:event_videoTypeComboBoxActionPerformed
 
     private void mkvtoolnixPathButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mkvtoolnixPathButtonActionPerformed
@@ -511,30 +546,72 @@ public class GuiJFrame extends javax.swing.JFrame {
 
     private void inputVideoButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_inputVideoButtonActionPerformed
         String path = openFileChooser(TitleValue.FILE_CHOOSER_OPEN);
-        this.inputVideoTextField.setText(path);
-        enableComponents();
+        if (path != null) {
+            if (!isDirectoryEmpty(path)) {
+                this.inputVideoTextField.setText(path);
+                addInputVideoFiles(path);
+                updateOutputList();
+                enableComponents();
+            } else {
+                openDialog(TitleValue.DIALOG_INPUT_VIDEO.getValue(lang), MessageValue.ERROR_EMPTY_FOLDER.getValue(lang), JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }//GEN-LAST:event_inputVideoButtonActionPerformed
 
     private void inputAudioButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_inputAudioButtonActionPerformed
         String path = openFileChooser(TitleValue.FILE_CHOOSER_OPEN);
-        this.inputAudioTextField.setText(path);
-        enableComponents();
+        if (path != null) {
+            if (!isDirectoryEmpty(path)) {
+                this.inputAudioTextField.setText(path);
+                if (addInputAudioFiles(path)) {
+                    updateOutputList();
+                    enableComponents();
+                } else {
+                    openDialog(TitleValue.DIALOG_INPUT_AUDIO.getValue(lang), MessageValue.FILE_AMOUNT_ERROR.getValue(lang), JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                openDialog(TitleValue.DIALOG_INPUT_AUDIO.getValue(lang), MessageValue.ERROR_EMPTY_FOLDER.getValue(lang), JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }//GEN-LAST:event_inputAudioButtonActionPerformed
 
     private void engSubtitleButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_engSubtitleButtonActionPerformed
         String path = openFileChooser(TitleValue.FILE_CHOOSER_OPEN);
-        this.engSubtitleTextField.setText(path);
+        if (path != null) {
+            if (!isDirectoryEmpty(path)) {
+                this.engSubtitleTextField.setText(path);
+                if (addEngSubFiles(path)) {
+                    updateOutputList();
+                    enableComponents();
+                } else {
+                    openDialog(TitleValue.DIALOG_INPUT_ENGLISH_SUBTITLE.getValue(lang), MessageValue.FILE_AMOUNT_ERROR.getValue(lang), JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                openDialog(TitleValue.DIALOG_INPUT_ENGLISH_SUBTITLE.getValue(lang), MessageValue.ERROR_EMPTY_FOLDER.getValue(lang), JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }//GEN-LAST:event_engSubtitleButtonActionPerformed
 
     private void forcedSubtitleButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_forcedSubtitleButtonActionPerformed
         String path = openFileChooser(TitleValue.FILE_CHOOSER_OPEN);
-        this.forcedSubtitleTextField.setText(path);
+        if (path != null) {
+            if (!isDirectoryEmpty(path)) {
+                this.forcedSubtitleTextField.setText(path);
+                addForcedSubFiles(path);
+                updateOutputList();
+                enableComponents();
+            } else {
+                openDialog(TitleValue.DIALOG_INPUT_FORCED_SUBTITLE.getValue(lang), MessageValue.ERROR_EMPTY_FOLDER.getValue(lang), JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }//GEN-LAST:event_forcedSubtitleButtonActionPerformed
 
     private void outputVideoButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_outputVideoButtonActionPerformed
         String path = openFileChooser(TitleValue.FILE_CHOOSER_SAVE);
-        this.outputVideoTextField.setText(path);
-        enableComponents();
+        if (path != null) {
+            this.outputVideoTextField.setText(path);
+            enableComponents();
+        }
     }//GEN-LAST:event_outputVideoButtonActionPerformed
 
     private void saveConfigButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveConfigButtonActionPerformed
@@ -548,6 +625,35 @@ public class GuiJFrame extends javax.swing.JFrame {
             openDialog(TitleValue.DIALOG_SAVE_CONFIG.getValue(lang), MessageValue.ERROR_SAVE_CONFIG.getValue(lang), JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_saveConfigButtonActionPerformed
+
+    private void codecTypeComboBoxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_codecTypeComboBoxActionPerformed
+        updateOutputList();
+    }//GEN-LAST:event_codecTypeComboBoxActionPerformed
+
+    private void startButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_startButtonActionPerformed
+        for (int i = 0; i < resources.size(); i++) {
+            if (forcedSubList != null) {
+                if (this.outputTable.getValueAt(i, 3) != null) {
+                    resources.get(i).setInputForcedSub(this.outputTable.getValueAt(i, 3).toString());
+                }
+            }
+        }
+        resources.forEach(resource -> {
+            System.out.println("v: " + resource.getInputVideo() + " a: " + resource.getInputAudio() + " e_s: " + resource.getInputEngSub() + " f_s: " + resource.getInputForcedSub() + " o_v: " + resource.getOutputVideo());
+        });
+        PsCommand command = new PsCommand(resources, this.mkvtoolnixPathTextField.getText(), this.inputVideoTextField.getText(), this.inputAudioTextField.getText(), this.engSubtitleTextField.getText(), this.forcedSubtitleTextField.getText(), this.outputVideoTextField.getText(), this.resolutionComboBox.getSelectedItem().toString());
+        new Thread(new Runnable() {
+            public void run() {
+                PsCommandResponse response = command.execute();
+                if (response.isSuccess()) {
+                    openDialog(TitleValue.DIALOG_EXECUTE_COMMAND.getValue(lang), MessageValue.SUCCESS_COMMAND_EXECUTION.getValue(lang), JOptionPane.PLAIN_MESSAGE);
+                } else {
+                    openDialog(TitleValue.DIALOG_EXECUTE_COMMAND.getValue(lang), response.getErrorMessage(), JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        }).start();
+
+    }//GEN-LAST:event_startButtonActionPerformed
 
     /**
      * @param args the command line arguments
@@ -626,7 +732,7 @@ public class GuiJFrame extends javax.swing.JFrame {
         this.releaseLabel.setText(LabelValue.RELEASE_NAME.getValue(lang));
         this.codecTypeLabel.setText(LabelValue.CODEC_TYPE.getValue(lang));
         //output list panel
-        this.outputListPanel.setBorder(BorderFactory.createTitledBorder(LabelValue.OUTPUT_LIST.getValue(lang)));
+        //this.outputListPanel.setBorder(BorderFactory.createTitledBorder(LabelValue.OUTPUT_LIST.getValue(lang)));
         this.startButton.setText(ButtonValue.START.getValue(lang));
     }
 
@@ -656,7 +762,7 @@ public class GuiJFrame extends javax.swing.JFrame {
 
         this.inputVideoLabel.setEnabled(mkvtoolnixPathEnabled);
         this.inputVideoButton.setEnabled(mkvtoolnixPathEnabled);
-        
+
         this.inputAudioLabel.setEnabled(inputVideoEnabled);
         this.inputAudioButton.setEnabled(inputVideoEnabled);
 
@@ -688,8 +794,22 @@ public class GuiJFrame extends javax.swing.JFrame {
 
         this.outputVideoLabel.setEnabled(inputAudioEnabled);
         this.outputVideoButton.setEnabled(inputAudioEnabled);
-        
+
         this.startButton.setEnabled(outputEnabled);
+    }
+
+    private void updateOutputList() {
+        if (resources != null) {
+            DefaultTableModel dtm = (DefaultTableModel) this.outputTable.getModel();
+            dtm.setRowCount(0);
+            for (Resource resource : resources) {
+                dtm.addRow(new Object[]{resource.getInputVideo(), resource.getInputAudio(), resource.getInputEngSub(), null, getOutputVideoName(resource)});
+                if (forcedSubList != null) {
+                    TableColumn forcedSubColumn = this.outputTable.getColumnModel().getColumn(3);
+                    forcedSubColumn.setCellEditor(new DefaultCellEditor(createForcedSubComboBox()));
+                }
+            }
+        }
     }
 
     private boolean isNotEmpty(String value) {
@@ -699,14 +819,102 @@ public class GuiJFrame extends javax.swing.JFrame {
         return false;
     }
 
+    private boolean isDirectoryEmpty(String path) {
+        File directory = new File(path);
+        if (directory.exists() && directory.isDirectory()) {
+            File[] files = directory.listFiles();
+            if (files.length > 0) {
+                System.out.println("files size: " + files.length);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void addInputVideoFiles(String path) {
+        if (resources == null) {
+            resources = new ArrayList<>();
+        } else {
+            resources.clear();
+            this.inputAudioTextField.setText(null);
+            this.engSubtitleTextField.setText(null);
+        }
+        for (File file : new File(path).listFiles()) {
+            if (isContainValue(Constans.SUPPORTED_VIDEO_EXTENSIONS, FilenameUtils.getExtension(file.getName()))) {
+                Resource resource = new Resource();
+                resource.setInputVideo(file.getName());
+                resources.add(resource);
+                System.out.println("file: " + file.getName());
+            }
+        }
+    }
+
+    private boolean addInputAudioFiles(String path) {
+        File[] files = new File(path).listFiles();
+        if (files.length < resources.size()) {
+            return false;
+        }
+        for (int i = 0; i < resources.size(); i++) {
+            if (isContainValue(Constans.SUPPORTED_AUDIO_EXTENSIONS, FilenameUtils.getExtension(files[i].getName()))) {
+                resources.get(i).setInputAudio(files[i].getName());
+                System.out.println("file: " + files[i].getName());
+            }
+        }
+        return true;
+    }
+
+    private boolean addEngSubFiles(String path) {
+        File[] files = new File(path).listFiles();
+        if (files.length < resources.size()) {
+            return false;
+        }
+        for (int i = 0; i < resources.size(); i++) {
+            if (isContainValue(Constans.SUPPORTED_SUBTITLE_EXTENSIONS, FilenameUtils.getExtension(files[i].getName()))) {
+                resources.get(i).setInputEngSub(files[i].getName());
+                System.out.println("file: " + files[i].getName());
+            }
+        }
+        return true;
+    }
+
+    private void addForcedSubFiles(String path) {
+        File[] files = new File(path).listFiles();
+        if (forcedSubList == null) {
+            forcedSubList = new ArrayList<>();
+        }
+        forcedSubList.clear();
+        forcedSubList.add("");
+        for (File file : files) {
+            if (isContainValue(Constans.SUPPORTED_SUBTITLE_EXTENSIONS, FilenameUtils.getExtension(file.getName()))) {
+                forcedSubList.add(file.getName());
+                System.out.println("file: " + file.getName());
+            }
+        }
+    }
+
+    private boolean isContainValue(String[] array, String value) {
+        for (String element : array) {
+            if (element.equalsIgnoreCase(value)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private String openFileChooser(TitleValue titleValue) {
-        JFileChooser chooser = new JFileChooser();
+        JFileChooser chooser = null;
+        if (currentPath != null) {
+            chooser = new JFileChooser(new File(currentPath));
+        } else {
+            chooser = new JFileChooser();
+        }
         chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         chooser.setAcceptAllFileFilterUsed(false);
         chooser.setDialogTitle(titleValue.getValue(lang));
         int returnVal = chooser.showOpenDialog(this);
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             System.out.println("path=" + chooser.getSelectedFile().getAbsolutePath());
+            currentPath = FilenameUtils.getFullPathNoEndSeparator(chooser.getSelectedFile().getAbsolutePath());
             return chooser.getSelectedFile().getAbsolutePath();
         }
         return null;
@@ -714,6 +922,47 @@ public class GuiJFrame extends javax.swing.JFrame {
 
     private void openDialog(String title, String message, int dialogType) {
         JOptionPane.showMessageDialog(this, message, title, dialogType);
+    }
+
+    private void initTable() {
+        DefaultTableModel dtm = new DefaultTableModel(0, 0);
+        dtm.setColumnIdentifiers(new Object[]{LabelValue.INPUT_VIDEO_NAME.getValue(lang), LabelValue.INPUT_AUDIO_NAME.getValue(lang), LabelValue.INPUT_ENG_SUB_NAME.getValue(lang), LabelValue.INPUT_FORCED_SUB_NAME.getValue(lang), LabelValue.OUTPUT_VIDEO_NAME.getValue(lang)});
+        this.outputTable.setModel(dtm);
+    }
+
+    private javax.swing.JComboBox<String> createForcedSubComboBox() {
+        if (forcedSubList != null) {
+            javax.swing.JComboBox<String> comboBox = new javax.swing.JComboBox();
+            forcedSubList.forEach(item -> {
+                comboBox.addItem(item);
+            });
+            comboBox.setVisible(true);
+            return comboBox;
+        }
+        return null;
+    }
+
+    private String getOutputVideoName(Resource resource) {
+        String videoName = resource.getInputVideo();
+        int beginIndex = videoName.indexOf(".S");
+        int endIndex = videoName.indexOf(".720p");
+        if (endIndex == -1) {
+            endIndex = videoName.indexOf(".1080p");
+        }
+        StringBuilder buffer = new StringBuilder();
+        buffer.append(this.seriesTitleTextField.getText());
+        buffer.append(videoName.substring(beginIndex, endIndex));
+        buffer.append(".");
+        buffer.append(this.resolutionComboBox.getSelectedItem().toString());
+        buffer.append(".");
+        buffer.append(this.videoTypeComboBox.getSelectedItem().toString());
+        buffer.append(".");
+        buffer.append(this.codecTypeComboBox.getSelectedItem().toString());
+        buffer.append("-");
+        buffer.append(this.releaseTextField.getText());
+        buffer.append(".mkv");
+        resource.setOutputVideo(buffer.toString());
+        return buffer.toString();
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -739,9 +988,8 @@ public class GuiJFrame extends javax.swing.JFrame {
     private javax.swing.JLabel mkvtoolnixPathLabel;
     private javax.swing.JTextField mkvtoolnixPathTextField;
     private javax.swing.JPanel outputConfigPanel;
-    private javax.swing.JList<String> outputListList;
-    private javax.swing.JPanel outputListPanel;
-    private javax.swing.JScrollPane outputListScrollPane;
+    private javax.swing.JScrollPane outputScrollPane;
+    private javax.swing.JTable outputTable;
     private javax.swing.JButton outputVideoButton;
     private javax.swing.JLabel outputVideoLabel;
     private javax.swing.JTextField outputVideoTextField;
@@ -755,6 +1003,7 @@ public class GuiJFrame extends javax.swing.JFrame {
     private javax.swing.JLabel seriesTitleLabel;
     private javax.swing.JTextField seriesTitleTextField;
     private javax.swing.JButton startButton;
+    private javax.swing.JLabel versionLabel;
     private javax.swing.JComboBox<String> videoTypeComboBox;
     private javax.swing.JLabel videoTypeLabel;
     // End of variables declaration//GEN-END:variables

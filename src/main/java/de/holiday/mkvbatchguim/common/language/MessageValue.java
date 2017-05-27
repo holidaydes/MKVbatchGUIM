@@ -13,7 +13,10 @@ import de.holiday.mkvbatchguim.common.Language;
  */
 public enum MessageValue {
     ERROR_SAVE_CONFIG("A konfiguráció mentése sikertelen", "Unsuccessfull saving configuration"),
-    SUCCESS_SAVE_CONFIG("A konfiguráció mentése sikeres", "Successfully saved configuration");
+    SUCCESS_SAVE_CONFIG("A konfiguráció mentése sikeres", "Successfully saved configuration"),
+    ERROR_EMPTY_FOLDER("Üres mappa", "Empty folder"),
+    FILE_AMOUNT_ERROR("Kevesebb fájl található a mappában mint a videóból", "There is less file than videos amount"),
+    SUCCESS_COMMAND_EXECUTION("Sikeres végrehajtás", "Succesfull execution");
     
     String hunText;
     String engText;

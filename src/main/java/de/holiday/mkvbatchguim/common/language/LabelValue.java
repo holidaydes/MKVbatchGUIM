@@ -29,7 +29,12 @@ public enum LabelValue {
     OUTPUT_LIST("Kimenet lista", "Output list"),
     SERIES_TITLE("Sorozat cím", "Series title"),
     RELEASE_NAME("Release név", "Release name"),
-    CODEC_TYPE("Kódek típus", "Codec type");
+    CODEC_TYPE("Kódek típus", "Codec type"),
+    INPUT_VIDEO_NAME("Videó név", "Video name"),
+    INPUT_AUDIO_NAME("Audió név", "Audio name"),
+    INPUT_ENG_SUB_NAME("Angol felirat név", "English subtitle name"),
+    INPUT_FORCED_SUB_NAME("Forced felirat név", "Forced subtitle name"),
+    OUTPUT_VIDEO_NAME("Kimenet név", "Kimenet name");
     
     String hunText;
     String engText;
